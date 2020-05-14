@@ -12,7 +12,7 @@ into a phylogenetic-tree building software such as [MEGA](https://www.megasoftwa
 [Popart](http://popart.otago.ac.nz/index.shtml) to build a median-spanning network.
 It would also be useful to have a spreadsheet containing details of the haplotypes.
 
-Usage:
+## Usage
 
 ```get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna > haplotypes.csv```
 
