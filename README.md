@@ -13,5 +13,15 @@ into a phylogenetic-tree building software such as [MEGA](https://www.megasoftwa
 It would also be useful to have a spreadsheet containing details of the haplotypes.
 
 Usage:
+
 ```get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna > haplotypes.csv```
+
+Currently, the script expects to find three further input files in the current directory:
+
+```outbreak_staff_list.txt
+outbreak_patient_list.txt
+duplicates_for_exclusion_list.txt
+```
+
+Horribly, these are currently hard-coded. Yuk.
 
