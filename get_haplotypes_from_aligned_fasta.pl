@@ -4,21 +4,34 @@ use strict;
 use warnings ;
 use Bio::SeqIO ;
 
-my $ref_id = 'MN908947.3';
+my $ref_id = 'MN908947.3'; # Specify ID of the sequence that is going to be treated as the reference
 my $exclude_ambiguous_sites = 1;
 my $maximum_allowed_ambiguous_sites_in_sequence = 5000;
-my $start_position = 56;
-my $end_position = 29797;
+my $start_position = 56; # Ignore positions to the left of this in the genome alignment
+my $end_position = 29797; # Ignore positions to the right of this in the genome alignment
+
+
+### We want to specify a subset of sequences that come from a narrow outbreak within the wider population
+### These lists should be in plain text files with one ID on each line
 my $outbreak_staff_file = 'outbreak_staff_list.txt';
 my $outbreak_patient_file = 'outbreak_patient_list.txt';
-my $exclude_file = 'duplicates_for_exclusion_list.txt';
+my $exclude_file = 'duplicates_for_exclusion_list.txt'; # We may want to exclude sequences if, for example, they are duplicates from same sample
     
 my $sequence_file = shift or die "Usage: $0 <sequence file>\n" ;
 
 ### Get lists of IDs that are to be treated specially
-my %outbreak_staff_ids = %{ get_ids_from_text_file($outbreak_staff_file) };
-my %outbreak_patient_ids = %{ get_ids_from_text_file($outbreak_patient_file) };
-my %exclude_ids = %{ get_ids_from_text_file($exclude_file) };
+my %outbreak_staff_ids;
+my %outbreak_patient_ids;
+my %exclude_ids;
+if (defined $outbreak_staff_file) {
+    my %outbreak_staff_ids = %{ get_ids_from_text_file($outbreak_staff_file) };
+}
+if (defined $outbreak_patient_file) {
+    my %outbreak_patient_ids = %{ get_ids_from_text_file($outbreak_patient_file) };
+}
+if (defined $exclude_file) {
+    my %exclude_ids = %{ get_ids_from_text_file($exclude_file) };
+}
 
 ### Get sequences from aligned FastA file
 my $id2seq_ref = get_aligned_sequences($sequence_file);
