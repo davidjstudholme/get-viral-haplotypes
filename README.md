@@ -18,7 +18,8 @@ Usage:
 
 Currently, the script expects to find three further input files in the current directory:
 
-```outbreak_staff_list.txt
+```
+outbreak_staff_list.txt
 outbreak_patient_list.txt
 duplicates_for_exclusion_list.txt
 ```
