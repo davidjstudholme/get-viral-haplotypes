@@ -4,60 +4,73 @@ use strict;
 use warnings ;
 use Bio::SeqIO ;
 
-my $ref_id = 'MN908947.3'; # Specify ID of the sequence that is going to be treated as the reference
+my $ref_id = 'BIRM-5E2A3';
+my $ref_id = 'MN908947.3';
+
 my $exclude_ambiguous_sites = 1;
 my $maximum_allowed_ambiguous_sites_in_sequence = 5000;
 my $start_position = 56; # Ignore positions to the left of this in the genome alignment
 my $end_position = 29797; # Ignore positions to the right of this in the genome alignment
-
+my $only_include_outbreak_samples = 0;
 
 ### We want to specify a subset of sequences that come from a narrow outbreak within the wider population
 ### These lists should be in plain text files with one ID on each line
 my $outbreak_staff_file = 'outbreak_staff_list.txt';
 my $outbreak_patient_file = 'outbreak_patient_list.txt';
 my $exclude_file = 'duplicates_for_exclusion_list.txt'; # We may want to exclude sequences if, for example, they are duplicates from same sample
-    
 my $sequence_file = shift or die "Usage: $0 <sequence file>\n" ;
 
 ### Get lists of IDs that are to be treated specially
 my %outbreak_staff_ids;
 my %outbreak_patient_ids;
 my %exclude_ids;
+
 if (defined $outbreak_staff_file) {
-    my %outbreak_staff_ids = %{ get_ids_from_text_file($outbreak_staff_file) };
-}
+    %outbreak_staff_ids = %{ get_ids_from_text_file($outbreak_staff_file) };
+    }
 if (defined $outbreak_patient_file) {
-    my %outbreak_patient_ids = %{ get_ids_from_text_file($outbreak_patient_file) };
+    %outbreak_patient_ids = %{ get_ids_from_text_file($outbreak_patient_file) };
 }
 if (defined $exclude_file) {
-    my %exclude_ids = %{ get_ids_from_text_file($exclude_file) };
+    %exclude_ids = %{ get_ids_from_text_file($exclude_file) };
 }
 
 ### Get sequences from aligned FastA file
 my $id2seq_ref = get_aligned_sequences($sequence_file);
 my %id2seq = %{ $id2seq_ref };
+my $count = scalar( keys %id2seq );
+warn "Finished reading $count sequences from file\n";
 
-my $only_include_outbreak_samples = 0;
+### Optionally, exlcude all sequences that are not included in the outbreak
 if ($only_include_outbreak_samples) {
     foreach my $id ( keys %id2seq ) {
 	if (defined $exclude_ids{$id}) {
             delete $id2seq{$id};
+	    #warn "Deleting '$id' because it is in the 'exclude' list\n";
 	} elsif (defined $outbreak_staff_ids{$id} 
 		 or defined $outbreak_patient_ids{$id}
-	    or $id eq $ref_id) {
-	    warn "Retaining $id\n";
+		 or $id eq $ref_id) {
+	    #warn "Retaining $id\n";
 	} else {
 	    delete $id2seq{$id};
-	} 
+	    #warn "Deleting '$id' because it is not on the 'staff outbreak' or 'patient outbreak' list\n";
+	}
     }
+    warn "Finished deleting non-outbreak and excluded sequences\n";
 }
+
+
 
 ### Check that all sequences have equal lengths and get length
 my $seq_length = check_lengths_of_sequences(\%id2seq);
 
+warn  "Finished checking lengths of sequences\n";
+
 ### Remove ambiguous sequences
 $id2seq_ref = remove_ambiguous_sequences(\%id2seq, $maximum_allowed_ambiguous_sites_in_sequence);
 %id2seq = %{ $id2seq_ref };
+
+warn "Finished removing ambiguous sequences\n";
 
 ### Check each position in each sequence for variation     
 my ($variant_positions_ref, $excluded_positions_ref) = get_variants(\%id2seq, $start_position, $end_position,
@@ -94,7 +107,8 @@ if ($only_include_outbreak_samples ) {
 write_pseudosequences_nexus_file($nexus_file, \%id2pseudoseq, 
 				 \%outbreak_staff_ids,
 				 \%outbreak_patient_ids,
-				 \%exclude_ids
+				 \%exclude_ids,
+				 $ref_id
     );
 warn "Wrote pseudosequences to file '$nexus_file'\n";
 
@@ -145,7 +159,7 @@ sub check_lengths_of_sequences {
     warn "Number of lengths = $number_of_lengths\n";
     die @lengths unless $number_of_lengths == 1;
     my $seq_length = shift @lengths;
-    #warn "Length of sequences = $seq_length\n";
+    warn "Length of sequences = $seq_length\n";
 }
 
 sub get_aligned_sequences {
@@ -157,12 +171,22 @@ sub get_aligned_sequences {
     my $inseq = Bio::SeqIO->new('-file' => "<$sequence_file",
                                 '-format' => 'fasta' ) ;
     while (my $seq_obj = $inseq->next_seq ) {
-  	
-        my $id = $seq_obj->id ;
+	my $id = $seq_obj->id ;
         my $seq = $seq_obj->seq ;
         my $desc = $seq_obj->description ;
+	
+	if ($id =~ m/^[\w\s]+\/[\w\s\d-]+\/\d+$/) {
+	    #warn "\n$id\n";
+	    my @fields = split(/\//, $id);
+	    #warn "@fields";
+	    my ($location, $cog_id, $year) = @fields;
+	    $id = $cog_id;
+	} else {
+	    warn "$id";
+	}
+	#warn "'$id'\n";
 
-	$id =~ s/\/.*//;
+	die unless defined $id;
 	
         $id2seq{$id} = $seq;
     }
@@ -192,42 +216,62 @@ sub get_variants{
     my %seq_ids_outbreak_only;
     foreach my $id (keys %outbreak_staff_ids, keys %outbreak_patient_ids) {
 	if (defined $exclude_ids{$id}) {
-	    #warn "Ignoring $id\n";
+	    #warn "Ignoring $id because it is on the 'exclude' list\n";
 	} elsif (defined $id2seq{$id}) {
 	    $seq_ids_outbreak_only{$id} ++;
+	    #warn "Including '$id' on the 'outbreak' list\n";
 	} else {
 	    #warn "Ignoring $id\n";
 	}
     }
-    
-    my @seq_ids_to_be_examined = keys %id2seq;
-    ###my @seq_ids_to_be_examined = keys %seq_ids_outbreak_only;
-    foreach my $i ($start_position .. $end_position) { 
-	#warn "Checking position $i\n";
+
+    foreach my $i ($start_position .. $end_position) {
+	#warn "Checking position $i\n";                                                                                                 
 	my %bases_at_this_pos;
-	
-	foreach my $id (@seq_ids_to_be_examined) {
-	    
+	foreach my $id (keys %id2seq) {
 	    my $seq = $id2seq{$id};
 	    my $base = lc( substr($seq, ($i-1), 1) );
 	    if ($base =~ m/^[acgtu]$/) {
 		$bases_at_this_pos{$base}++;
-	    } elsif (defined $outbreak_staff_ids{$id} or defined $outbreak_patient_ids{$id}) {
-		unless (defined $exclude_ids{$id}) {
-		    # This site is ambiguous in at least one of our non-excluded outbreak sequences so let's eliminate this site
-		    $excluded_positions{$i}++;
-		}
-	    }
+		#warn "Found $base at $i in $id\n";
+	    } 
 	}
 	my @bases_at_this_pos = sort keys %bases_at_this_pos;
 	if (scalar(@bases_at_this_pos) > 1) {
-	    foreach my $base(@bases_at_this_pos){ 
+	    foreach my $base(@bases_at_this_pos){
 		my $count_for_this_base = $bases_at_this_pos{$base};
 		#warn "$i\n\t$base\t$count_for_this_base\n";
 		$variant_positions{$i} ++;
 	    }
 	}
     }
+
+
+    ### We need to exclude sites that are ambiguous among outbreak sequences
+    my @seq_ids_to_be_examined = keys %id2seq;
+    if (scalar keys %seq_ids_outbreak_only) {
+	@seq_ids_to_be_examined = keys %seq_ids_outbreak_only;
+	warn "We will only exclude sites that are ambiguous among the outbreak sequences\n";
+    }
+    foreach my $i (sort {$a<=>$b} keys %variant_positions) { 
+	#warn "Checking position $i\n";
+	my %bases_at_this_pos;
+	foreach my $id (@seq_ids_to_be_examined) {
+	    my $seq = $id2seq{$id};
+	    my $base = lc( substr($seq, ($i-1), 1) );
+	    if ($base =~ m/^[acgtu]$/) {
+		$bases_at_this_pos{$base}++;
+		#warn "Found $base at $i in $id\n";
+	    } elsif (defined $outbreak_staff_ids{$id} or defined $outbreak_patient_ids{$id}) {
+		unless (defined $exclude_ids{$id}) {
+		    # This site is ambiguous in at least one of our non-excluded outbreak sequences so let's eliminate this site
+		    $excluded_positions{$i}++;
+		    warn "Going to ignore position $i because it is ambiguous ('$base') in $id\n";
+		}
+	    }
+	}
+    }
+    
     return(\%variant_positions, \%excluded_positions);
 }
 
@@ -261,13 +305,11 @@ sub get_pseudosequences{
 	unless ($id2pseudoseq{$id} =~ m/^[ACGTU]+$/i) {
 
 	    #warn "Deleting $id $id2pseudoseq{$id} because it contains Ns\n";
-		    delete $id2pseudoseq{$id};
+	    delete $id2pseudoseq{$id};
 	}
     }
     return \%id2pseudoseq;
 }
-
-
 
 sub write_table_of_haplotypes{
     my $variant_positions_ref = shift or die;
@@ -340,11 +382,6 @@ sub write_table_of_haplotypes{
     }
 }
 
-
-
-
-
-
 sub write_pseudosequences_fasta_file{
     my $pseudosequence_file = shift or die;
     my $id2pseudoseq_ref = shift or die;
@@ -365,13 +402,12 @@ sub write_pseudosequences_nexus_file {
     my $outbreak_staff_ids_ref = shift or die;
     my $outbreak_patient_ids_ref = shift or die; 
     my $exclude_ids_ref = shift or die;
+    my $ref_id= shift or die;
     
     my %outbreak_staff_ids = %{$outbreak_staff_ids_ref };
     my %outbreak_patient_ids = %{$outbreak_patient_ids_ref };
     my %exclude_ids = %{$exclude_ids_ref };
-    
     my %id2pseudoseq = %{ $id2pseudoseq_ref };
-
     
     my @taxa;
     foreach my $id (sort keys %id2pseudoseq) {
@@ -401,7 +437,7 @@ sub write_pseudosequences_nexus_file {
 	#warn "$id => ".length( $id2pseudoseq{$id} )."\n";
     }
     my @nchars = keys %nchars;;
-    die if scalar(@nchars) != 1;
+    die "'@nchars'" if scalar(@nchars) != 1;
     my $nchar= $nchars[0];
     
     print PSEUDOSEQ "BEGIN CHARACTERS;\n";
@@ -428,7 +464,7 @@ sub write_pseudosequences_nexus_file {
 	my $not_outbreak=1;
 	my $reference = 0;
 	
-	if ($id =~ m/MN908947\.3/) {
+	if ($id eq $ref_id) {
 	    $reference = 1;
 	    $not_outbreak=0;
 	}
