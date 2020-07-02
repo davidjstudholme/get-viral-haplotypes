@@ -29,15 +29,36 @@ of the Nexus-formatted output file. Also, when choosing which genomic sites will
 
 ## Usage
 
-```get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna > haplotypes.csv```
+```get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna outbreak.txt> haplotypes.csv```
 
-Currently, the script expects to find three further input files in the current directory:
+Currently, the script expects to find a further input file in the current directory:
 
 ```
-outbreak_staff_list.txt
-outbreak_patient_list.txt
 duplicates_for_exclusion_list.txt
 ```
+This file simply includes one ID per line. Horribly, this filename is currently hard-coded. Yuk.
 
-Horribly, these are currently hard-coded. Yuk.
+The ```outbreak.txt``` file specifies which samples belong to which outbreak and which are from staff and which are from patients.
+
+e.g.
+
+```
+### Outbreak number 1: Smith Ward
+EXET-123456	1	S
+EXET-123457	1	S
+EXET-123458	1	S
+EXET-123459	1	P
+
+### Outbreak number 2: Jones Ward
+EXET-123656	2	P
+EXET-123657	2	P
+EXET-123658	2	S
+EXET-123659	2	P
+
+### Outbreak number 3: Community hospital
+EXET-123656	3	S
+EXET-123657	3	P
+EXET-123658	3	S
+EXET-123659	3	S
+```
 
