@@ -1,0 +1,191 @@
+---
+title: "SARS-CoV-2 genomes analysis: from unaligned fastA to haplotypes and Nexus"
+output:
+  html_document:
+    df_print: paged
+    code_folding: hide
+    toc: true
+    toc_float: false
+    number_sections: true
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Prepare R environment
+We need various R packages to be installed and loaded 
+
+## Install R packages
+
+```{r get_packages, eval=FALSE, echo=TRUE}
+install.packages("googlesheets4")
+install.packages("ggplot2")
+install.packages("tidyverse")
+install.packages("ellipsis")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("Biostrings")
+BiocManager::install("ggtree")
+BiocManager::install("seqinr") 
+install.packages("ape")
+```
+
+## Load the packages for use
+
+```{r load_libraries, echo=TRUE, eval=TRUE}
+library("tidyverse")
+library("googlesheets4")
+library("ggplot2")
+library("ape")
+#library("Biostrings")
+#library("ggplot2")
+#library("ggtree")
+library("seqinr")
+library("pegas")
+library("stringr")
+library(knitr)
+library(kableExtra)
+```
+
+# Obtain and prepare metadata
+
+Basic anonymised metadata is stored in the 'Manifest' document, maintained by Ben Temperton's team 
+
+## Read the metadata from the Manifest Google Sheet
+
+```{r read_sheet, echo=TRUE, eval=TRUE}
+manifest <- range_read("link/to/google/sheet")
+attach(manifest)
+```
+
+# Numbers of sequences (listed in Manifest)
+These are the numbers of genoes sequenced on each date, according to ben's Manifest document.
+
+```{r plot_dates, eval=TRUE, echo=TRUE}
+ggplot(manifest, aes(x=date_sequenced)) + geom_histogram()
+```
+
+# List the sequencing batches done so far
+Sequence data are delivered in batches. Here is a list of the batches that were used in the current analysis.
+
+```{r sequencing_libraries, eval=TRUE, echo=TRUE}
+sort( unique(library_name)  )
+```
+
+# Convert IDs (sample IDs versus COGUK IDs) 
+Each genome sequence is labelled with a COGUK ID. This usually looks like "EXET-xxxxx". However, the information about which samples to include in outbreak analyses is usually based on samples IDs. The Manifest document contains both sample IDs and COGUK IDs and so allows us to map between the two types of ID. 
+
+## Generate a mapping of the sample IDs against the COGUK IDs
+
+```{r map_the_ids, eval=TRUE, echo=TRUE}
+mapped_with_blanks <- select(manifest, sender_sample_id, central_sample_id, date_sequenced)
+mapped <- na.omit(mapped_with_blanks, na.action = "omit", fill = NULL)
+```
+
+## Map sample IDs to COGUK IDs
+Here we generate a text file (.tsv) that maps between the two types of IDs.
+
+```{r write_the_mapping_files, eval=TRUE, echo=TRUE}
+### Write the mapping to TSV file
+mapping.filename <- "mapped.tsv"
+write_tsv(
+  mapped,
+  mapping.filename,
+  na = "NA",
+  append = FALSE,
+  quote_escape = "double",
+  eol = "\n",
+)
+```
+
+# Prepare files specifying outbreak IDs 
+Insert the COG-UK IDs into the textfile that flags the outbreak samples and split into individual outbreaks.
+
+```{bash insert_coguk_ids, engine.opts='-l', eval=TRUE, echo=TRUE}
+export mapping_filename="mapped.tsv"
+export outbreaks_filename="outbreaks.28-dec-20.txt"
+export outbreaks_with_coguk_ids_filename="outbreaks.with-cog-uk-ids.txt"
+perl ./replace_ids.pl $mapping_filename $outbreaks_filename > $outbreaks_with_coguk_ids_filename
+perl ./generate_individual_outbreaks.pl $outbreaks_with_coguk_ids_filename
+```
+# Calculate haplotypes
+
+## Download the sequence data from Isca
+The genome sequences are deposited on the Isca server by Ben's team. Here we copy them to the local server.
+
+```{bash download_seqs, engine.opts='-l', eval=FALSE, echo=TRUE}
+rsync -zarhu --exclude '*.bam' username@login.server.ac.uk:/path/to/files/* .
+```
+
+## Align all sequences and generate nexus files etc. summarising the haplotypes
+Align all the genome sequences against the Wuhan-Hu-1 reference genome sequence (MN908947.3) using MAFFT. Then use a custom script to call haplotypes from that alignment. The haplotype calls are described in several output files. This includes Nexus files that can be used to generate high-quality images of haplotype networks using the PopART software. 
+
+```{bash combine_seq_files, engine.opts='-l', eval=TRUE, echo=TRUE}
+export sequences_filename="sequences."$(date +"%m-%d-%y")".fna"
+export alignment_filename="sequences."$(date +"%m-%d-%y")".align"
+
+cat EXET_*/EXET-*/consensus.fa*  > $sequences_filename
+echo Combined the sequences into file: $sequences_filename
+echo Number of sequence files:
+grep -c '>' $sequences_filename
+
+### Perform alignment unless it has already been done
+if test -s $alignment_filename; then
+  echo $alignment_filename already exists, so skip alignment     
+  else
+  echo Perform the alignment:
+    mafft --version
+    mafft --auto --addfragments $sequences_filename GCA_009858895.3_ASM985889v3_genomic.fna > $alignment_filename
+  fi
+echo Number of sequences in alignment:
+grep -c '>' $alignment_filename
+
+for outbreak_file in outbreak.*.tsv ; do
+  echo $outbreak_file
+  perl ./get_viral_haplotypes/get_haplotypes_from_aligned_fasta.pl $alignment_filename $outbreak_file
+  done
+```
+
+# Summarise info about haplotypes in each outbreak
+Here we summarise the information about each outbreak, including a plot of the haplotype network and a table listing the haplotypes, including genomic coordinates of the SNPs that make up that haplotype. Formatting of the tables needs improving. (Formatting options don't seem to get carried over into kitted document).
+
+```{r draw_networks, eval=TRUE, echo=TRUE, results='asis'}
+par(mfrow=c(1,2)) 
+
+path = "./"
+file.names <- dir(path, pattern =".tsv.outbreak-only.nex")
+
+for(i in 1:length(file.names)){
+  nexus.file <- file.names[i]
+
+  title <- nexus.file
+  title <- stringr::str_replace(title, "sequences.", "")
+  title <- stringr::str_replace(title, ".tsv.outbreak-only.nex", "")  
+  title <- stringr::str_replace(title, ".align.outbreak", "")    
+
+  ### Print a table of the haplotypes
+  try({  csv.file <- nexus.file
+    csv.file <- stringr::str_replace(csv.file, ".nex", ".csv")
+    x <- read.table( csv.file, sep="\t", header=T)
+    print({
+      x %>%
+    kbl(caption = title) %>%
+    kable_classic(full_width = F, html_font = "Cambria")
+    })
+    
+  })
+  
+  ### Attempt to plot haplotype network
+    try( {
+    haplotype.alignment <- ape::as.alignment(read.nexus.data(nexus.file) )
+    haplotype.alignment.DNAbin <- as.DNAbin(haplotype.alignment)
+    hap <- pegas::haplotype(haplotype.alignment.DNAbin)
+    net <- haploNet(hap)
+    plot(hap, main=title)
+    plot(net, size = attr(net, "freq"), scale.ratio = 2, cex = 1.2, main=title)
+  } )
+}
+```
+
