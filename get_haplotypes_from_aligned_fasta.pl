@@ -23,7 +23,6 @@ my $exclude_file = 'duplicates_for_exclusion_list.txt'; # We may want to exclude
 
 
 ### Get lists of IDs that are to be treated specially
-my %id_to_traits;
 my ($trait_to_ids_ref, $id_to_traits_ref) = get_ids_from_text_file($traits_file);
 my %trait_to_ids = %{ $trait_to_ids_ref};
 my %id_to_traits = %{ $id_to_traits_ref};
@@ -50,10 +49,10 @@ foreach my $only_include_outbreak_samples (0,1) {
 	foreach my $id ( keys %id2seq ) {
 	    if (defined $id_to_traits{$id} 
 		or $id eq $ref_id) {
-		warn "Retaining $id\n" if 1;
+		#warn "Retaining $id\n";
 	    } else {
 		delete $id2seq{$id};
-		warn "Deleting '$id' because it is not in the lists" if 0;
+		#warn "Deleting '$id' because it is not in the lists";
 	    }
 	}
 	warn "Finished deleting non-outbreak and excluded sequences\n";
@@ -146,7 +145,7 @@ sub remove_ambiguous_sequences{
         my $ambiguous_count = length($seq) - $unambiguous_count;
         if ( $ambiguous_count > $maximum_allowed_ambiguous_sites_in_sequence) {
             delete $id2seq{$id};
-            warn "Deleting sequence $id, which has $ambiguous_count ambiguities\n";
+            #warn "Deleting sequence $id, which has $ambiguous_count ambiguities\n";
         }
     }
     return \%id2seq;
@@ -270,13 +269,9 @@ sub get_variants{
 		$bases_at_this_pos{$base}++;
 		#warn "Found $base at $i in $id\n";
 	    } elsif (defined $seq_ids_outbreak_only{$id}) {
-		if ($i == 16952) {
-		    warn "Manually overriding the exclusion of position 16952";
-		} else {
-		    # This site is ambiguous in at least one of our non-excluded outbreak sequences so let's eliminate this site
-		    $excluded_positions{$i}++;
-		    warn"Going to ignore position $i because it is ambiguous ('$base') in $id\n";
-		}
+		# This site is ambiguous in at least one of our non-excluded outbreak sequences so let's eliminate this site
+		$excluded_positions{$i}++;
+		#warn"Going to ignore position $i because it is ambiguous ('$base') in $id\n";
 	    }
 	}
     }
@@ -317,12 +312,8 @@ sub get_pseudosequences{
     ### Remove pseudosequences that contain Ns
     foreach my $id (keys %id2pseudoseq) {
 	unless ($id2pseudoseq{$id} =~ m/^[ACGTU]+$/i) {
-	    if ($id eq 'EXET-136501') {
-		warn "Manually over-riding the deletion of $id";
-	    } elsif (1) {
-		warn "Deleting $id  because it contains Ns";
-		delete $id2pseudoseq{$id};
-	    }
+	    #warn "Deleting $id  because it contains Ns";
+	    delete $id2pseudoseq{$id};
 	}
     }
     return \%id2pseudoseq;
@@ -525,9 +516,9 @@ sub get_ids_from_text_file{
     open (INFILE, "<$filename") or die "Failed to open file '$filename' for reading\n$!";
     while(<INFILE>) {
 	chomp;
-	if (/\s*\#/) {
+	if (/^\s*\#/) {
 	    ### Ignore line
-	    warn "Ignoring line '$_'\n";
+	    #warn "Ignoring line '$_'\n";
 	} elsif (m/(\S+)\s+(\S+)\s+(\S+)/) {
 	    my ($id, $outbreak, $patient_or_staff) = ($1, $2, $3);
 
@@ -548,7 +539,7 @@ sub get_ids_from_text_file{
 	    warn "$id\t=>\t$trait\n";
 	    
 	} else {
-	    warn "Ignoring line: $_\n";
+	    #warn "Ignoring line: $_\n";
 	}
     }
 
@@ -565,11 +556,11 @@ sub get_ids_for_removal {
     while (<INFILE>) {
 	if (m/\s*\#/) {
 	    chomp;
-	    warn "Ignoring line $_\n";
+	    #warn "Ignoring line $_\n";
 	} elsif (m/^(\S+)/) {
 	    $ids_for_removal{$1}++;
 	} else {
-	    warn "Ignoring line $_\n";
+	    #warn "Ignoring line $_\n";
 	}
     }
     close INFILE;
