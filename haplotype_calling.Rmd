@@ -56,7 +56,7 @@ Basic anonymised metadata is stored in the 'Manifest' document, maintained by Be
 ## Read the metadata from the Manifest Google Sheet
 
 ```{r read_sheet, echo=TRUE, eval=TRUE}
-manifest <- range_read("link/to/google/sheet")
+manifest <- range_read("path/to/google/sheet")
 attach(manifest)
 ```
 
@@ -116,13 +116,13 @@ perl ./generate_individual_outbreaks.pl $outbreaks_with_coguk_ids_filename
 The genome sequences are deposited on the Isca server by Ben's team. Here we copy them to the local server.
 
 ```{bash download_seqs, engine.opts='-l', eval=FALSE, echo=TRUE}
-rsync -zarhu --exclude '*.bam' username@login.server.ac.uk:/path/to/files/* .
+rsync -zarhu --exclude '*.bam' username@login.server.ac.uk:/oath/to/data/* .
 ```
 
 ## Align all sequences and generate nexus files etc. summarising the haplotypes
 Align all the genome sequences against the Wuhan-Hu-1 reference genome sequence (MN908947.3) using MAFFT. Then use a custom script to call haplotypes from that alignment. The haplotype calls are described in several output files. This includes Nexus files that can be used to generate high-quality images of haplotype networks using the PopART software. 
 
-```{bash combine_seq_files, engine.opts='-l', eval=TRUE, echo=TRUE}
+```{bash combine_seq_files, engine.opts='-l', eval=FALSE, echo=TRUE}
 export sequences_filename="sequences."$(date +"%m-%d-%y")".fna"
 export alignment_filename="sequences."$(date +"%m-%d-%y")".align"
 
@@ -137,7 +137,7 @@ if test -s $alignment_filename; then
   else
   echo Perform the alignment:
     mafft --version
-    mafft --auto --addfragments $sequences_filename GCA_009858895.3_ASM985889v3_genomic.fna > $alignment_filename
+    mafft --auto --keeplength --addfragments $sequences_filename GCA_009858895.3_ASM985889v3_genomic.fna > $alignment_filename
   fi
 echo Number of sequences in alignment:
 grep -c '>' $alignment_filename
@@ -146,6 +146,18 @@ for outbreak_file in outbreak.*.tsv ; do
   echo $outbreak_file
   perl ./get_viral_haplotypes/get_haplotypes_from_aligned_fasta.pl $alignment_filename $outbreak_file
   done
+```
+
+# Check for the variant of concern (B.1.1.7)
+Here we check each sequenced genome for the presence of the single-nucleotide changes
+and deletions associated with the emerging 'variant of concern' belonging to lineage B.1.1.7.
+The set of 22 SNPs and 3 indels is taken from: https://virological.org/t/preliminary-genomic-characterisation-of-an-emergent-sars-cov-2-lineage-in-the-uk-defined-by-a-novel-set-of-spike-mutations/563
+Of these, A23063T is the N501Y mutation in the S protein.
+
+```{bash look_for_VOC, eval=TRUE, echo=TRUE}
+
+perl ./check_aligned_sequences_for_B_1_1_7.pl sequences.01-03-21.align
+
 ```
 
 # Summarise info about haplotypes in each outbreak
@@ -188,4 +200,5 @@ for(i in 1:length(file.names)){
   } )
 }
 ```
+
 
