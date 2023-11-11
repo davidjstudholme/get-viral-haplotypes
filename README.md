@@ -29,7 +29,7 @@ of the Nexus-formatted output file. Also, when choosing which genomic sites will
 
 ## Usage
 
-```get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna outbreak.txt> haplotypes.csv```
+```perl get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna outbreak.txt> haplotypes.csv```
 
 Currently, the script expects to find a further input file in the current directory:
 
