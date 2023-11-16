@@ -5,7 +5,7 @@
 I have a set of aligned viral genome sequences in aligned FastA format. For example, this could be a set of SARS-CoV-2 genomes
 from the [COG-UK](https://www.cogconsortium.uk/data/) consortium: [the file is here](https://cog-uk.s3.climb.ac.uk/2020-05-08/cog_2020-05-08_alignment.fasta).
 
-I generall used this method to align multiple viral genome sequences: https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html
+I generally used this method to align multiple viral genome sequences: https://mafft.cbrc.jp/alignment/software/closelyrelatedviralgenomes.html.
 
 I want to perform some phylogenetic or population genetics analysis on this set of genomes, which requires that the
 genome sequences are converted into haplotypes. Those haplotypes are required in standard formats: FastA e.g. to feed
