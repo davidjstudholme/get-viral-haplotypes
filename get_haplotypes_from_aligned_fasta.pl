@@ -191,7 +191,7 @@ sub get_aligned_sequences {
 	} elsif ($id =~ m/(EXET-[\d\w]+)\/ARTIC\/nanopolish/) {
 	    $id = $1;
 	} else {
-	    warn "Couldn't parse ID $id";
+	    #warn "Couldn't parse ID $id";
 	}
 	#warn "'$id'\n";
 
