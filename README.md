@@ -64,7 +64,7 @@ Currently, the script expects to find a further input file in the current direct
 ```
 duplicates_for_exclusion_list.txt
 ```
-This file simply includes one ID per line. Horribly, this filename is currently hard-coded; that's a bad thing.
+This file simply includes one ID per line. Horribly, this filename is currently hard-coded; that's a bad thing. IT is OK for this file to be empty, i.e. a zero-size file.
 
 The ```outbreak.txt``` file specifies which samples belong to which outbreak and which are from staff and which are from patients.
 
