@@ -31,7 +31,9 @@ of the Nexus-formatted output file. Also, when choosing which genomic sites will
 
 ## Usage
 
-```perl path/to/get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna outbreak.txt> haplotypes.csv```
+```
+perl path/to/get_haplotypes_from_aligned_fasta.pl aligned-fasta-file.fna outbreak.txt> haplotypes.csv
+```
 
 (Obviously you need to replace ```path/to/``` with the relative path to the Perl script.)
 
