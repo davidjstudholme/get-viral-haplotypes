@@ -31,10 +31,25 @@ my $exclude_ambiguous_sites = 1;
 my $maximum_allowed_ambiguous_sites_in_sequence = 5000;
 ```
 
-
 Within this set of viral genome sequences, a subset may come from a localised outbreak in a healthcare setting
 that includes infected staff and infected and patients. I want to be able to mark this subset within the traits block
 of the Nexus-formatted output file. Also, when choosing which genomic sites will be included in the haplotyping, 
+
+If you are working with a genome other than SARS-CoV-2 and are therefore not using the Wu reference genome sequence,
+then you will need to modify this line:
+
+```
+my $ref_id = 'MN908947.3'; # You will need to change this if you are not working with SARS-CoV-2 Wuhan-Hu-1 reference genome sequence.
+```
+
+You will also want to modify these lines:
+
+```
+my $start_position = 56; # Ignore positions to the left of this in the genome alignment
+my $end_position = 29797; # Ignore positions to the right of this in the genome alignment
+```
+
+
 
 ## Usage
 
