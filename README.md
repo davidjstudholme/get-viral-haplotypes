@@ -24,7 +24,7 @@ A reasonable value of x might be 5000 for a 30,000-bp genome. Later, we remove a
 sequences that contain any ambiguities at the sites included in the haplotype. 
 Thus, we avoid having any ambiguous haplotypes, containing Ns.
 
-You can modify this behaviour by editing lines 14 and 15 in the script:
+You can modify this behaviour by editing lines 14 and 15 in the ```get_haplotypes_from_aligned_fasta.pl``` script:
 
 ```
 my $exclude_ambiguous_sites = 1;
@@ -36,13 +36,13 @@ that includes infected staff and infected and patients. I want to be able to mar
 of the Nexus-formatted output file. Also, when choosing which genomic sites will be included in the haplotyping, 
 
 If you are working with a genome other than SARS-CoV-2 and are therefore not using the Wu reference genome sequence,
-then you will need to modify this line:
+then you will need to modify this linein ```get_haplotypes_from_aligned_fasta.pl```:
 
 ```
 my $ref_id = 'MN908947.3'; # You will need to change this if you are not working with SARS-CoV-2 Wuhan-Hu-1 reference genome sequence.
 ```
 
-You will also want to modify these lines:
+You will also want to modify these lines in ```get_haplotypes_from_aligned_fasta.pl```:
 
 ```
 my $start_position = 56; # Ignore positions to the left of this in the genome alignment
