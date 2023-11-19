@@ -24,6 +24,13 @@ A reasonable value of x might be 5000 for a 30,000-bp genome. Later, we remove a
 sequences that contain any ambiguities at the sites included in the haplotype. 
 Thus we avoid having any ambiguous haplotypes, containing Ns.
 
+You can modify this behaviour by editing lines 14 and 15 in the script:
+
+```
+my $exclude_ambiguous_sites = 1;
+my $maximum_allowed_ambiguous_sites_in_sequence = 5000;
+```
+
 
 Within this set of viral genome sequences, a subset may come from a localised outbreak in a healthcare setting
 that includes infected staff and infected and patients. I want to be able to mark this subset within the traits block
