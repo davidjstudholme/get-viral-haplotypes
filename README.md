@@ -22,7 +22,7 @@ This should happen at two stages in the workflow.
 Initially, we remove all genome sequences that contain >= x ambiguous positions (Ns). 
 A reasonable value of x might be 5000 for a 30,000-bp genome. Later, we remove any 
 sequences that contain any ambiguities at the sites included in the haplotype. 
-Thus we avoid having any ambiguous haplotypes, containing Ns.
+Thus, we avoid having any ambiguous haplotypes, containing Ns.
 
 You can modify this behaviour by editing lines 14 and 15 in the script:
 
@@ -49,7 +49,7 @@ Currently, the script expects to find a further input file in the current direct
 ```
 duplicates_for_exclusion_list.txt
 ```
-This file simply includes one ID per line. Horribly, this filename is currently hard-coded. That's a bad thing.
+This file simply includes one ID per line. Horribly, this filename is currently hard-coded; that's a bad thing.
 
 The ```outbreak.txt``` file specifies which samples belong to which outbreak and which are from staff and which are from patients.
 
